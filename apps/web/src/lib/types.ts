@@ -1,0 +1,12 @@
+export type Severity = 'info' | 'warning' | 'critical';
+export type UserRole = 'city_admin' | 'analyst' | 'enforcement_officer' | 'health_officer' | 'standard_user';
+export interface User { id: string; email: string; name: string; role: UserRole; active: boolean; emailVerified: boolean; phone?: string; avatarUrl?: string }
+export interface City { id: string; name: string; state: string; latitude: number; longitude: number; aqi: number; pm25: number; pm10: number; no2: number; trend: 'up' | 'down' | 'flat'; updatedAt: string }
+export interface SensorReading { id: string; sensorId: string; cityId: string; ward: string; latitude: number; longitude: number; aqi: number; pm25: number; pm10: number; no2: number; temperature: number; humidity: number; observedAt: string }
+export interface ForecastPoint { cityId: string; ward: string; horizonHours: number; predictedAqi: number; lowerBound: number; upperBound: number; confidence: number; predictedAt: string; drivers: string[] }
+export interface Attribution { cityId: string; ward: string; generatedAt: string; confidence: number; sources: Array<{ source: string; contribution: number; direction: 'rising' | 'falling' | 'stable' }>; explanation: string }
+export interface Alert { id: string; cityId: string; ward: string; title: string; description: string; severity: Severity; status: 'open' | 'acknowledged' | 'resolved'; source: string; correlationId?: string; assignedTo?: string; createdAt: string; updatedAt: string }
+export interface Advisory { id: string; cityId: string; ward: string; severity: Severity; audience: string[]; channels: Array<'sms' | 'push' | 'email' | 'public_display'>; message: string; status: 'draft' | 'scheduled' | 'published'; reach: number; createdAt: string; publishedAt?: string }
+export interface EnforcementCase { id: string; cityId: string; ward: string; target: string; category: string; priority: number; evidenceScore: number; estimatedImpact: number; status: 'queued' | 'dispatched' | 'investigating' | 'resolved'; assignedUnit?: string; createdAt: string; updatedAt: string }
+export interface DashboardOverview { city: City; forecastDelta: number; activeAlerts: number; enforcementActions: number; citizensAlerted: number; sensorUptime: number; readings: SensorReading[]; forecasts: ForecastPoint[]; attribution: Attribution; insight: string }
+export interface Correlation { clusters: Array<{ id: string; alertIds: string[]; summary: string; severity: string; confidence: number }> }

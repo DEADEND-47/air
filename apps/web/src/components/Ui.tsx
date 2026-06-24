@@ -1,0 +1,40 @@
+import type { ReactNode } from 'react';
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, Inbox, RefreshCw, Sparkles } from 'lucide-react';
+import { aqiBand, aqiLabel, formatNumber } from '../lib/aqi';
+
+export function PageHeader({ eyebrow, title, description, actions }: { eyebrow?: string; title: string; description: string; actions?: ReactNode }) {
+  return <header className="page-header"><div>{eyebrow && <span className="eyebrow">{eyebrow}</span>}<h1>{title}</h1><p>{description}</p></div>{actions && <div className="page-actions">{actions}</div>}</header>;
+}
+
+export function MetricCard({ label, value, unit, delta, icon, tone = 'primary' }: { label: string; value: string | number; unit?: string; delta?: string; icon?: ReactNode; tone?: 'primary' | 'success' | 'warning' | 'danger' }) {
+  return <article className={`metric-card tone-${tone}`}><div className="metric-top"><span>{label}</span>{icon}</div><div className="metric-value">{typeof value === 'number' ? formatNumber(value) : value}{unit && <small>{unit}</small>}</div>{delta && <div className="metric-delta">{delta.startsWith('+') ? <ArrowUpRight /> : <ArrowDownRight />}{delta}</div>}</article>;
+}
+
+export function AqiBadge({ value, compact = false }: { value: number; compact?: boolean }) {
+  const band = aqiBand(value);
+  return <span className={`aqi-badge aqi-${band}`}><strong>{value}</strong>{!compact && <span>{aqiLabel(value)}</span>}</span>;
+}
+
+export function StatusChip({ value }: { value: string }) {
+  return <span className={`status-chip status-${value.replaceAll('_', '-')}`}>{value.replaceAll('_', ' ')}</span>;
+}
+
+export function Panel({ title, subtitle, action, children, className = '' }: { title?: string; subtitle?: string; action?: ReactNode; children: ReactNode; className?: string }) {
+  return <section className={`panel ${className}`}>{(title || action) && <header className="panel-header"><div>{title && <h2>{title}</h2>}{subtitle && <p>{subtitle}</p>}</div>{action}</header>}{children}</section>;
+}
+
+export function IntelligenceBrief({ children, title = 'Intelligence brief' }: { children: ReactNode; title?: string }) {
+  return <aside className="intelligence-brief"><div className="intelligence-heading"><Sparkles /><span>{title}</span><small>AI ASSIST</small></div><div>{children}</div></aside>;
+}
+
+export function LoadingState({ label = 'Synchronizing intelligence feeds' }: { label?: string }) {
+  return <div className="state-panel" role="status"><RefreshCw className="spin" /><strong>{label}</strong><span>Secure connection established</span></div>;
+}
+
+export function ErrorState({ message, retry }: { message: string; retry?: () => void }) {
+  return <div className="state-panel error-state" role="alert"><AlertTriangle /><strong>Data link interrupted</strong><span>{message}</span>{retry && <button className="button secondary" onClick={retry}><RefreshCw />Retry connection</button>}</div>;
+}
+
+export function EmptyState({ title, description }: { title: string; description: string }) {
+  return <div className="state-panel"><Inbox /><strong>{title}</strong><span>{description}</span></div>;
+}

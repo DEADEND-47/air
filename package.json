@@ -1,0 +1,29 @@
+{
+  "name": "airiq-smart-city-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "AirIQ smart-city air quality intelligence and response platform",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n api,web -c blue,green \"npm run dev -w @airiq/api\" \"npm run dev -w @airiq/web\"",
+    "build": "npm run build -w @airiq/api && npm run build -w @airiq/web",
+    "test": "npm run test -w @airiq/api && npm run test -w @airiq/web",
+    "test:coverage": "npm run test:coverage -w @airiq/api && npm run test:coverage -w @airiq/web",
+    "test:e2e": "npm run test:e2e -w @airiq/web",
+    "lint": "npm run lint -w @airiq/api && npm run lint -w @airiq/web",
+    "typecheck": "npm run typecheck -w @airiq/api && npm run typecheck -w @airiq/web",
+    "db:migrate": "npm run db:migrate -w @airiq/api",
+    "db:seed": "npm run db:seed -w @airiq/api",
+    "start": "npm run start -w @airiq/api"
+  },
+  "engines": {
+    "node": ">=22.12.0",
+    "npm": ">=10.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "supabase": "^2.107.0"
+  }
+}
