@@ -188,6 +188,7 @@ export function AppShell() {
           {navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} className={({ isActive }: NavLinkRenderProps) => `nav-item ${isActive ? 'active' : ''}`}><Icon aria-hidden="true" /><span>{label}</span></NavLink>)}
         </nav>
         <div className="sidebar-spacer" />
+        <NavLink className="nav-item mobile-only" to="/profile" onClick={() => setMobileOpen(false)}><Users aria-hidden="true" /><span>Profile</span></NavLink>
         {user?.role === 'admin' && <NavLink className="nav-item" to="/admin"><Users aria-hidden="true" /><span>Team & Access</span></NavLink>}
         {user?.role === 'admin' && <NavLink className="nav-item" to="/admin/audit"><FileSearch aria-hidden="true" /><span>Audit Log</span></NavLink>}
         <NavLink className="nav-item" to="/settings"><Settings aria-hidden="true" /><span>System Settings</span></NavLink>

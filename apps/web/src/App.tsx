@@ -24,6 +24,12 @@ function ProtectedLayout() {
   return <AppShell />;
 }
 
+function AdminOnly({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user?.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  return children;
+}
+
 export function App() {
   return <Routes>
     {/* Public auth routes */}
@@ -45,8 +51,8 @@ export function App() {
       <Route path="historical" element={<LazyScreen><HistoricalPage /></LazyScreen>} />
       <Route path="settings" element={<SettingsPage />} />
       <Route path="profile" element={<ProfilePage />} />
-      <Route path="admin" element={<AdminPage />} />
-      <Route path="admin/audit" element={<AdminAuditPage />} />
+      <Route path="admin" element={<AdminOnly><AdminPage /></AdminOnly>} />
+      <Route path="admin/audit" element={<AdminOnly><AdminAuditPage /></AdminOnly>} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>
   </Routes>;

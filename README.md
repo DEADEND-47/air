@@ -139,13 +139,14 @@ PATCH /api/v1/users/me/password
 Body: { currentPassword, newPassword }
 Response: { message }
 
-GET /api/v1/alerts?status=active&severity=high&cityId=delhi&search=pm2.5&page=1&limit=20
+GET /api/v1/alerts?status=active&severity=high&city_id=delhi&search=pm2.5&page=1&limit=20
 Response: { data, total, page, limit, totalPages }
 
 GET /api/v1/admin/audit?page=1&limit=50&days=7&action=login
 Response: { data: [{ id, userEmail, action, entityType, entityId, ipAddress, createdAt }], total, page, limit, totalPages }
 
 Cached endpoints:
+GET /api/v1/dashboard?cityId=delhi
 GET /api/v1/dashboard/overview?cityId=delhi
 GET /api/v1/cities
 Header: X-Cache is HIT or MISS

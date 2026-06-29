@@ -26,14 +26,17 @@ const upload = multer({
 
 airiqRoutes.use(authenticate);
 
-airiqRoutes.get('/dashboard/overview', cacheGet(), async (req, res, next) => {
+async function sendDashboardOverview(req, res, next) {
   try {
     const { cityId } = z.object({ cityId: z.string().default('delhi') }).parse(req.query);
     const data = await airiqService.overview(cityId);
     if (!data) return res.status(404).json({ error: { message: 'City not found', code: 'NOT_FOUND' } });
     return res.json(data);
   } catch (error) { return next(error); }
-});
+}
+
+airiqRoutes.get('/dashboard', cacheGet(), sendDashboardOverview);
+airiqRoutes.get('/dashboard/overview', cacheGet(), sendDashboardOverview);
 
 airiqRoutes.get('/cities', cacheGet(), async (_req, res, next) => {
   try { res.json({ data: await airiqService.listCities() }); }
@@ -71,7 +74,7 @@ airiqRoutes.get('/alerts', async (req, res, next) => {
   try {
     const pagination = paginationSchema.parse(req.query);
     const data = await airiqService.listAlertsPage({
-      cityId: req.query.cityId ? String(req.query.cityId) : undefined,
+      cityId: req.query.city_id ? String(req.query.city_id) : req.query.cityId ? String(req.query.cityId) : undefined,
       status: req.query.status ? String(req.query.status).replace('active', 'open') : undefined,
       severity: req.query.severity ? String(req.query.severity).replace('high', 'critical').replace('medium', 'warning').replace('low', 'info') : undefined,
       search: req.query.search ? String(req.query.search) : undefined,

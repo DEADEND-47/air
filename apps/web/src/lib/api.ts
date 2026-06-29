@@ -66,7 +66,7 @@ export const api = {
 
   alertsPage: (params: { cityId?: string; page?: number; limit?: number; unread?: boolean; status?: string; severity?: string; search?: string } = {}) => {
     const search = new URLSearchParams();
-    if (params.cityId) search.set('cityId', params.cityId);
+    if (params.cityId) search.set('city_id', params.cityId);
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
     if (params.unread) search.set('unread', 'true');

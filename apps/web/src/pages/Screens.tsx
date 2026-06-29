@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowDown,
@@ -31,14 +31,13 @@ import {
   Wind,
 } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { api } from '../lib/api';
 import { formatNumber, relativeTime } from '../lib/aqi';
 import { copyRowsToClipboard, downloadCsv } from '../lib/csv';
-import type { Alert, AuditEvent, CityComparison, EnforcementCase, HistoricalReading, SensorReading } from '../lib/types';
+import type { Alert, AuditEvent, EnforcementCase, SensorReading } from '../lib/types';
 import { AttributionBars, CityTrendChart, ConfidenceChart, ContributionComparison, ForecastChart, Sparkline } from '../components/Charts';
 import { MapPanel } from '../components/MapPanel';
 import { AqiBadge, AqiBand, EmptyState, ErrorState, IntelligenceBrief, LoadingState, MetricCard, PageHeader, PaginationControls, Panel, StatusChip } from '../components/Ui';
@@ -181,38 +180,6 @@ export function CitiesPage() {
   </div>;
 }
 
-export function ComparePage() {
-  const cities = useQuery({ queryKey: ['cities'], queryFn: api.cities });
-  const [selected, setSelected] = useState(['delhi', 'mumbai', 'bengaluru']);
-  const query = useQuery({ queryKey: ['city-compare', selected], queryFn: () => api.compareCities(selected, 7), enabled: selected.length >= 2 });
-  const chartRows = useMemo(() => {
-    const byDate = new Map<string, Record<string, string | number>>();
-    for (const item of query.data ?? []) {
-      for (const reading of item.readings) {
-        const key = new Date(reading.observedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
-        byDate.set(key, { ...(byDate.get(key) ?? { day: key }), [item.city.name]: reading.aqi });
-      }
-    }
-    return [...byDate.values()].slice(-28);
-  }, [query.data]);
-  const colors = ['#54d8ff', '#ffb84d', '#47e6a5'];
-  const toggleCity = (cityId: string) => {
-    setSelected((current) => current.includes(cityId) ? current.filter((id) => id !== cityId) : [...current, cityId].slice(-3));
-  };
-  return <div className="page">
-    <PageHeader eyebrow="CITY COMPARISON" title="Compare Cities" description="Benchmark AQI movement and current pollution context across two or three monitored cities." />
-    <Panel title="Select cities" subtitle="Choose up to three cities for a seven-day AQI comparison">
-      <div className="compare-picker">{cities.data?.map((city) => <label key={city.id}><input type="checkbox" checked={selected.includes(city.id)} onChange={() => toggleCity(city.id)} />{city.name}</label>)}</div>
-    </Panel>
-    <Panel title="7-day AQI trend" subtitle="One line per selected city">
-      {query.isLoading ? <LoadingState /> : query.error ? <ErrorState message={query.error.message} /> : <div className="chart"><CityCompareChart data={chartRows} series={(query.data ?? []).map((item) => item.city.name)} colors={colors} /></div>}
-    </Panel>
-    <Panel title="Current comparison" subtitle="Latest city status and dominant pollutant">
-      <div className="table-wrap compare-table"><table><thead><tr><th>City</th><th>Current AQI</th><th>Dominant pollutant</th><th>Trend</th><th>Last reading</th></tr></thead><tbody>{(query.data ?? []).map((item: CityComparison) => <tr key={item.city.id}><td><strong>{item.city.name}</strong></td><td>{item.city.aqi}</td><td>{item.dominantPollutant}</td><td>{item.trend === 'up' ? 'Up' : item.trend === 'down' ? 'Down' : 'Stable'}</td><td>{item.lastReadingTime ? relativeTime(item.lastReadingTime) : 'No reading'}</td></tr>)}</tbody></table></div>
-    </Panel>
-  </div>;
-}
-
 export function AlertsPage() {
   const client = useQueryClient();
   const { activeCityId } = useCity();
@@ -261,23 +228,6 @@ export function SettingsPage() {
   const { activeCityId, setActiveCityId, cities } = useCity();
   const submit = (event: React.FormEvent) => { event.preventDefault(); setSaved(true); setTimeout(() => setSaved(false), 2500); };
   return <div className="page narrow-page"><PageHeader eyebrow="SYSTEM CONFIGURATION" title="Settings" description="Operator preferences, model controls, and notification routing." /><form onSubmit={submit}><Panel title="Operational defaults" subtitle="Applied to your command center session"><div className="settings-grid"><label>Default city<select value={activeCityId} onChange={(e) => setActiveCityId(e.target.value)}>{cities.map((city) => <option key={city.id} value={city.id}>{city.name}</option>)}</select></label><label>Refresh cadence<select defaultValue="60"><option value="30">30 seconds</option><option value="60">1 minute</option><option value="300">5 minutes</option></select></label><label>Measurement units<select><option>Metric (ug/m3)</option><option>US EPA AQI</option></select></label><label>Timezone<select><option>Asia/Kolkata (IST)</option></select></label></div></Panel><Panel title="Notification routing" subtitle="Choose which signals interrupt your session"><div className="toggle-list">{[['Critical AQI incidents', 'Always notify for severe threshold crossings', true], ['Forecast threshold warnings', 'Notify two hours before predicted exceedance', true], ['Sensor data-quality issues', 'Notify when a sensor leaves calibration tolerance', false], ['Enforcement updates', 'Notify when field units change case status', true]].map(([title, description, checked]) => <label key={String(title)}><span><strong>{title}</strong><small>{description}</small></span><input type="checkbox" defaultChecked={Boolean(checked)} /></label>)}</div></Panel><div className="settings-actions">{saved && <span className="save-confirmation"><Check />Settings saved</span>}<button className="button primary"><Settings />Save preferences</button></div></form></div>;
-}
-
-export function HistoricalPage() {
-  const { activeCityId } = useCity();
-  const toast = useToast();
-  const [page, setPage] = useState(1);
-  const [from, setFrom] = useState(() => new Date(Date.now() - 30 * 24 * 60 * 60_000).toISOString().slice(0, 10));
-  const [to, setTo] = useState(() => new Date().toISOString().slice(0, 10));
-  const query = useQuery({ queryKey: ['historical', activeCityId, from, to, page], queryFn: () => api.historicalPage({ cityId: activeCityId, from, to, page, limit: 20 }) });
-  const rows = (query.data?.data ?? []) as unknown as Array<Record<string, unknown>>;
-  const exportRows = () => { downloadCsv(`airiq-${activeCityId}-historical.csv`, rows); toast.success('Historical data exported.'); };
-  const copyRows = async () => { if (await copyRowsToClipboard(rows)) toast.success('Historical data copied.'); };
-  return <div className="page">
-    <PageHeader eyebrow="HISTORICAL DATA" title="Historical Data" description="Review ETL readings by date range and export the current filtered page." actions={<><button className="button secondary" onClick={copyRows} disabled={!query.data?.data.length}>Copy</button><button className="button primary" onClick={exportRows} disabled={!query.data?.data.length}><FileDown />Export CSV</button></>} />
-    <Panel title="Filters" subtitle="Server-side pagination keeps the table fast"><div className="historical-filters"><label>From<input type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(1); }} /></label><label>To<input type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(1); }} /></label></div></Panel>
-    <Panel title="Historical readings" subtitle={`${activeCityId.toUpperCase()} archive`}>{query.isLoading ? <LoadingState /> : query.error ? <ErrorState message={query.error.message} /> : !query.data?.data.length ? <EmptyState title="No readings" description="Run the ETL pipeline to populate historical data." /> : <><div className="table-wrap"><table><thead><tr><th>Observed</th><th>Station</th><th>Ward</th><th>AQI</th><th>PM2.5</th><th>PM10</th><th>Source</th></tr></thead><tbody>{query.data.data.map((row: HistoricalReading) => <tr key={row.id}><td>{new Date(row.observedAt).toLocaleString('en-IN')}</td><td>{row.stationName}</td><td>{row.ward}</td><td>{row.aqi}</td><td>{row.pm25}</td><td>{row.pm10}</td><td>{row.source}</td></tr>)}</tbody></table></div><PaginationControls {...query.data} onPage={setPage} /></>}</Panel>
-  </div>;
 }
 
 export function ProfilePage() {
@@ -330,16 +280,4 @@ export function AdminAuditPage() {
 
 export function NotFoundPage() {
   return <div className="not-found"><div className="not-found-code">404</div><Radio /><h1>Signal not found</h1><p>The requested AirIQ route is outside the active monitoring grid.</p><Link to="/" className="button primary">Return to command center</Link></div>;
-}
-
-function CityCompareChart({ data, series, colors }: { data: Array<Record<string, string | number>>; series: string[]; colors: string[] }) {
-  return <ResponsiveContainer width="100%" height="100%" minHeight={220}>
-    <LineChart data={data} margin={{ top: 12, right: 18, bottom: 0, left: -16 }}>
-      <CartesianGrid stroke="#20303c" strokeDasharray="2 4" vertical={false} />
-      <XAxis dataKey="day" stroke="#6e8492" axisLine={false} tickLine={false} fontSize={10} />
-      <YAxis stroke="#6e8492" axisLine={false} tickLine={false} fontSize={10} />
-      <Tooltip contentStyle={{ background: '#101820', border: '1px solid #2a3946', borderRadius: 6, color: '#e7f1f5' }} />
-      {series.map((name, index) => <Line key={name} type="monotone" dataKey={name} stroke={colors[index]} strokeWidth={2} dot={false} />)}
-    </LineChart>
-  </ResponsiveContainer>;
 }
