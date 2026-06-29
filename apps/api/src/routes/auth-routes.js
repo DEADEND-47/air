@@ -19,7 +19,7 @@ authRoutes.post('/register', async (req, res, next) => {
 authRoutes.post('/login', async (req, res, next) => {
   try {
     const input = z.object({ email: z.string().email(), password: z.string().min(1) }).parse(req.body);
-    res.json(await authService.login(input.email, input.password));
+    res.json(await authService.login(input.email, input.password, req.ip));
   } catch (error) { next(error); }
 });
 
@@ -55,7 +55,7 @@ authRoutes.post('/reset-password', async (req, res, next) => {
 });
 
 authRoutes.get('/me', authenticate, (req, res) => {
-  res.json({ user: { id: req.user.sub, email: req.user.email, name: req.user.name, role: req.user.role, active: true } });
+  res.json({ user: { id: req.user.sub, email: req.user.email, name: req.user.name, role: req.user.role, active: true, demoMode: req.user.email === 'demo@airiq.local' } });
 });
 
 authRoutes.get('/users', authenticate, requireRole('admin'), async (_req, res, next) => {

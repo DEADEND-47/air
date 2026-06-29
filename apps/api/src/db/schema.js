@@ -10,6 +10,7 @@ export const users = sqliteTable('users', {
   active: integer('active', { mode: 'boolean' }).notNull().default(true),
   resetTokenHash: text('reset_token_hash'),
   resetTokenExpiresAt: text('reset_token_expires_at'),
+  lastLoginAt: text('last_login_at'),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
@@ -175,6 +176,17 @@ export const settings = sqliteTable('settings', {
   key: text('key').primaryKey(),
   valueJson: text('value_json').notNull(),
   updatedAt: text('updated_at').notNull(),
+});
+
+export const auditEvents = sqliteTable('audit_events', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  userEmail: text('user_email'),
+  action: text('action').notNull(),
+  entityType: text('entity_type').notNull(),
+  entityId: text('entity_id'),
+  ipAddress: text('ip_address'),
+  createdAt: text('created_at').notNull(),
 });
 
 export const userRelations = relations(users, ({ many }) => ({

@@ -8,8 +8,9 @@ import { db } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { config } from '../config.js';
 import { airiqService } from '../services/airiq-service.js';
-import { authenticate, requireRole } from '../services/auth-service.js';
+import { authenticate, authService, rejectDemoWrites, requireRole } from '../services/auth-service.js';
 import { runEtl } from '../pipeline/etl-pipeline.js';
+import { cacheGet } from '../middleware/cache.js';
 
 const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -25,7 +26,7 @@ const upload = multer({
 
 airiqRoutes.use(authenticate);
 
-airiqRoutes.get('/dashboard/overview', async (req, res, next) => {
+airiqRoutes.get('/dashboard/overview', cacheGet(), async (req, res, next) => {
   try {
     const { cityId } = z.object({ cityId: z.string().default('delhi') }).parse(req.query);
     const data = await airiqService.overview(cityId);
@@ -34,9 +35,19 @@ airiqRoutes.get('/dashboard/overview', async (req, res, next) => {
   } catch (error) { return next(error); }
 });
 
-airiqRoutes.get('/cities', async (_req, res, next) => {
+airiqRoutes.get('/cities', cacheGet(), async (_req, res, next) => {
   try { res.json({ data: await airiqService.listCities() }); }
   catch (error) { next(error); }
+});
+
+airiqRoutes.get('/cities/compare', async (req, res, next) => {
+  try {
+    const input = z.object({
+      ids: z.string().default('delhi,mumbai,bengaluru'),
+      days: z.coerce.number().int().min(1).max(30).default(7),
+    }).parse(req.query);
+    res.json({ data: await airiqService.compareCities(input.ids.split(',').map((id) => id.trim()).filter(Boolean), input.days) });
+  } catch (error) { next(error); }
 });
 
 airiqRoutes.get('/readings', async (req, res, next) => {
@@ -61,6 +72,9 @@ airiqRoutes.get('/alerts', async (req, res, next) => {
     const pagination = paginationSchema.parse(req.query);
     const data = await airiqService.listAlertsPage({
       cityId: req.query.cityId ? String(req.query.cityId) : undefined,
+      status: req.query.status ? String(req.query.status).replace('active', 'open') : undefined,
+      severity: req.query.severity ? String(req.query.severity).replace('high', 'critical').replace('medium', 'warning').replace('low', 'info') : undefined,
+      search: req.query.search ? String(req.query.search) : undefined,
       unreadOnly: req.query.unread === 'true',
     }, pagination);
     res.json(data);
@@ -68,7 +82,7 @@ airiqRoutes.get('/alerts', async (req, res, next) => {
   catch (error) { next(error); }
 });
 
-airiqRoutes.post('/alerts', requireRole('admin', 'analyst'), async (req, res, next) => {
+airiqRoutes.post('/alerts', rejectDemoWrites, requireRole('admin', 'analyst'), async (req, res, next) => {
   try {
     const input = z.object({
       cityId: z.string(),
@@ -82,7 +96,7 @@ airiqRoutes.post('/alerts', requireRole('admin', 'analyst'), async (req, res, ne
   } catch (error) { next(error); }
 });
 
-airiqRoutes.patch('/alerts/:id/status', requireRole('admin', 'analyst'), async (req, res, next) => {
+airiqRoutes.patch('/alerts/:id/status', rejectDemoWrites, requireRole('admin', 'analyst'), async (req, res, next) => {
   try {
     const { status } = z.object({ status: z.enum(['open', 'acknowledged', 'resolved']) }).parse(req.body);
     res.json(await airiqService.updateAlertStatus(req.params.id, status));
@@ -104,7 +118,7 @@ airiqRoutes.get('/advisories', async (req, res, next) => {
   catch (error) { next(error); }
 });
 
-airiqRoutes.post('/advisories', requireRole('admin', 'analyst'), async (req, res, next) => {
+airiqRoutes.post('/advisories', rejectDemoWrites, requireRole('admin', 'analyst'), async (req, res, next) => {
   try {
     const input = z.object({
       cityId: z.string(),
@@ -127,24 +141,24 @@ airiqRoutes.get('/enforcement', async (req, res, next) => {
   catch (error) { next(error); }
 });
 
-airiqRoutes.post('/enforcement/generate', requireRole('admin', 'analyst'), async (req, res, next) => {
+airiqRoutes.post('/enforcement/generate', rejectDemoWrites, requireRole('admin', 'analyst'), async (req, res, next) => {
   try { res.status(201).json({ data: await airiqService.generateEnforcement(String(req.body.cityId ?? 'delhi')) }); }
   catch (error) { next(error); }
 });
 
-airiqRoutes.patch('/enforcement/:id/status', requireRole('admin', 'analyst'), async (req, res, next) => {
+airiqRoutes.patch('/enforcement/:id/status', rejectDemoWrites, requireRole('admin', 'analyst'), async (req, res, next) => {
   try {
     const input = z.object({ status: z.enum(['queued', 'dispatched', 'investigating', 'resolved']), assignedUnit: z.string().optional() }).parse(req.body);
     res.json(await airiqService.updateEnforcementStatus(req.params.id, input));
   } catch (error) { next(error); }
 });
 
-airiqRoutes.post('/agents/forecast', requireRole('admin', 'analyst'), async (req, res, next) => {
+airiqRoutes.post('/agents/forecast', rejectDemoWrites, requireRole('admin', 'analyst'), async (req, res, next) => {
   try { res.json(await airiqService.runForecast(String(req.body.cityId ?? 'delhi'))); }
   catch (error) { next(error); }
 });
 
-airiqRoutes.post('/agents/attribution', requireRole('admin', 'analyst'), async (req, res, next) => {
+airiqRoutes.post('/agents/attribution', rejectDemoWrites, requireRole('admin', 'analyst'), async (req, res, next) => {
   try { res.json(await airiqService.runAttribution(String(req.body.cityId ?? 'delhi'), String(req.body.ward ?? 'Citywide'))); }
   catch (error) { next(error); }
 });
@@ -173,7 +187,7 @@ airiqRoutes.get('/historical/stats', async (req, res, next) => {
   } catch (error) { next(error); }
 });
 
-airiqRoutes.post('/pipeline/run', requireRole('admin'), async (req, res, next) => {
+airiqRoutes.post('/pipeline/run', rejectDemoWrites, requireRole('admin'), async (req, res, next) => {
   try { res.status(202).json({ data: await runEtl({ source: req.body.source ?? 'synthetic', daysBack: req.body.daysBack ?? 30 }) }); }
   catch (error) { next(error); }
 });
@@ -188,7 +202,38 @@ airiqRoutes.patch('/admin/settings', requireRole('admin'), async (req, res, next
   catch (error) { next(error); }
 });
 
-airiqRoutes.post('/uploads', requireRole('admin', 'analyst'), upload.single('file'), async (req, res, next) => {
+airiqRoutes.get('/admin/audit', requireRole('admin'), async (req, res, next) => {
+  try {
+    const input = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      limit: z.coerce.number().int().min(1).max(100).default(50),
+      days: z.coerce.number().int().min(1).max(365).default(7),
+      action: z.string().optional(),
+    }).parse(req.query);
+    res.json(await airiqService.listAuditEvents(input));
+  } catch (error) { next(error); }
+});
+
+airiqRoutes.get('/users/me', async (req, res, next) => {
+  try { res.json({ data: await authService.getProfile(req.user.sub) }); }
+  catch (error) { next(error); }
+});
+
+airiqRoutes.patch('/users/me', rejectDemoWrites, async (req, res, next) => {
+  try {
+    const input = z.object({ firstName: z.string().min(1), lastName: z.string().min(1) }).parse(req.body);
+    res.json({ data: await authService.updateProfile(req.user.sub, input) });
+  } catch (error) { next(error); }
+});
+
+airiqRoutes.patch('/users/me/password', rejectDemoWrites, async (req, res, next) => {
+  try {
+    const input = z.object({ currentPassword: z.string().min(1), newPassword: z.string().min(8) }).parse(req.body);
+    res.json(await authService.changePassword(req.user.sub, input));
+  } catch (error) { next(error); }
+});
+
+airiqRoutes.post('/uploads', rejectDemoWrites, requireRole('admin', 'analyst'), upload.single('file'), async (req, res, next) => {
   try {
     if (!req.file) return res.status(400).json({ error: { message: 'File is required', code: 'FILE_REQUIRED' } });
     const record = {

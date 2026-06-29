@@ -1,6 +1,7 @@
 import { db } from '../db/index.js';
 import * as schema from '../db/schema.js';
 import { broadcast } from '../realtime/hub.js';
+import { clearCache } from '../middleware/cache.js';
 
 const CITY_PROFILES = [
   { id: 'delhi', name: 'Delhi', latitude: 28.6139, longitude: 77.209, baseAqi: 220 },
@@ -144,6 +145,7 @@ export async function runEtl({ source = 'synthetic', daysBack = 30 } = {}) {
     });
   }
   if (insertedRows.length) {
+    clearCache();
     broadcast('readings.updated', { source, rows: insertedRows.slice(0, 25), rowsInserted: inserted });
   }
   return { source, rowsSeen: rows.length, rowsInserted: inserted };

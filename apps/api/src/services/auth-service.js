@@ -11,6 +11,19 @@ const now = () => new Date().toISOString();
 const id = (prefix) => `${prefix}-${crypto.randomUUID()}`;
 const sha256 = (value) => crypto.createHash('sha256').update(value).digest('hex');
 
+export async function writeAudit({ user, action, entityType, entityId, ipAddress }) {
+  await db.insert(schema.auditEvents).values({
+    id: id('audit'),
+    userId: user?.id ?? user?.sub ?? null,
+    userEmail: user?.email ?? null,
+    action,
+    entityType,
+    entityId: entityId ?? null,
+    ipAddress: ipAddress ?? null,
+    createdAt: now(),
+  });
+}
+
 function safeUser(user) {
   if (!user) return null;
   return {
@@ -19,6 +32,8 @@ function safeUser(user) {
     name: user.name,
     role: user.role,
     active: Boolean(user.active),
+    lastLoginAt: user.lastLoginAt ?? null,
+    demoMode: user.email === 'demo@airiq.local',
   };
 }
 
@@ -71,16 +86,20 @@ export class AuthService {
     };
   }
 
-  async login(email, password) {
+  async login(email, password, ipAddress) {
     const user = await db.select().from(schema.users).where(eq(schema.users.email, email.toLowerCase())).get();
     if (!user || !user.active || !(await bcrypt.compare(password, user.passwordHash))) {
       const error = new Error('Invalid email or password');
       error.status = 401;
       throw error;
     }
+    const lastLoginAt = now();
+    await db.update(schema.users).set({ lastLoginAt, updatedAt: lastLoginAt }).where(eq(schema.users.id, user.id));
+    const signedUser = { ...user, lastLoginAt };
+    await writeAudit({ user: signedUser, action: 'login', entityType: 'user', entityId: user.id, ipAddress });
     return {
-      user: safeUser(user),
-      accessToken: this.signAccessToken(user),
+      user: safeUser(signedUser),
+      accessToken: this.signAccessToken(signedUser),
       refreshToken: await this.createRefreshToken(user.id),
       expiresIn: config.ACCESS_TOKEN_MINUTES * 60,
     };
@@ -147,6 +166,38 @@ export class AuthService {
   async listUsers() {
     return (await db.select().from(schema.users)).map(safeUser);
   }
+
+  async getProfile(userId) {
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (!user) {
+      const error = new Error('User not found');
+      error.status = 404;
+      throw error;
+    }
+    return safeUser(user);
+  }
+
+  async updateProfile(userId, input) {
+    const name = `${input.firstName.trim()} ${input.lastName.trim()}`.trim();
+    await db.update(schema.users).set({ name, updatedAt: now() }).where(eq(schema.users.id, userId));
+    await writeAudit({ user: { id: userId }, action: 'profile.update', entityType: 'user', entityId: userId });
+    return this.getProfile(userId);
+  }
+
+  async changePassword(userId, input) {
+    const user = await db.select().from(schema.users).where(eq(schema.users.id, userId)).get();
+    if (!user || !(await bcrypt.compare(input.currentPassword, user.passwordHash))) {
+      const error = new Error('Current password is incorrect');
+      error.status = 400;
+      throw error;
+    }
+    await db.update(schema.users).set({
+      passwordHash: await bcrypt.hash(input.newPassword, 10),
+      updatedAt: now(),
+    }).where(eq(schema.users.id, userId));
+    await writeAudit({ user: { id: userId }, action: 'password.change', entityType: 'user', entityId: userId });
+    return { message: 'Password changed successfully.' };
+  }
 }
 
 export const authService = new AuthService();
@@ -167,4 +218,11 @@ export function requireRole(...roles) {
     if (!roles.includes(req.user?.role)) return res.status(403).json({ error: { message: 'Forbidden', code: 'FORBIDDEN' } });
     return next();
   };
+}
+
+export function rejectDemoWrites(req, res, next) {
+  if (req.user?.email === 'demo@airiq.local') {
+    return res.status(403).json({ error: { message: 'Demo mode is read-only', code: 'DEMO_READ_ONLY' } });
+  }
+  return next();
 }

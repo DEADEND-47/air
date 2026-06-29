@@ -1,6 +1,24 @@
 # AirIQ Simplified Local Stack
 
-AirIQ is a smart-city air quality dashboard simplified for local React + Node development. It keeps the core operational workflows, removes heavyweight cloud infrastructure, and now includes the V2 polish needed for demos, coursework, and portfolio walkthroughs.
+AirIQ is a smart-city air quality dashboard simplified for local React + Node development. It keeps the core operational workflows, removes heavyweight cloud infrastructure, and now includes V3 polish for public demos, city comparison, and profile management.
+
+## What V3 Adds
+
+- Public landing page at `/` with feature highlights and a one-click `Try Demo` flow
+- Protected app dashboard moved to `/dashboard`
+- Demo operator account at `demo@airiq.local / Password123!`
+- Visible Demo Mode banner and backend read-only guard for demo writes
+- Compare Cities page at `/compare` backed by `GET /api/v1/cities/compare`
+- Profile page at `/profile` with account details, display-name update, and password change forms
+- Profile API endpoints for `GET /api/v1/users/me`, `PATCH /api/v1/users/me`, and `PATCH /api/v1/users/me/password`
+- Alert API filtering for status, severity, city, and search query parameters
+- Alerts page URL filters, CSV export, and spreadsheet copy
+- Historical page spreadsheet copy plus clearer CSV headers
+- In-memory 60 second API cache for dashboard and cities responses with `X-Cache: HIT/MISS`
+- React error boundary and small built-in toast notification system
+- Lazy loading for heavier Compare and Historical screens
+- Admin-only audit log page at `/admin/audit`
+- Mobile table card layout for narrow screens
 
 ## What V2 Adds
 
@@ -73,11 +91,13 @@ The Drizzle schema lives in `apps/api/src/db/schema.js` and covers:
 
 ## Demo Features To Try
 
-1. Sign in with `admin@airiq.local / Password123!`
-2. Open the dashboard to see the AQI health band and live timestamp
-3. Use the bell icon to view unread alerts
-4. Open `Historical Data` and export the current page to CSV
-5. Check `Alert Center` and page through the feed with Previous/Next controls
+1. Open `/` and use `Try Demo` for a one-click read-only portfolio walkthrough
+2. Sign in with `admin@airiq.local / Password123!` for full local admin access
+3. Open `/dashboard` to see the AQI health band and live timestamp
+4. Use the bell icon to view unread alerts
+5. Open `Compare Cities` to benchmark 2 or 3 cities
+6. Open `Historical Data` and export the current page to CSV
+7. Check `Alert Center` and page through the feed with Previous/Next controls
 
 ## Run Locally
 
@@ -99,6 +119,36 @@ Demo login:
 
 ```text
 admin@airiq.local / Password123!
+demo@airiq.local / Password123!
+```
+
+## V3 API Endpoints
+
+```text
+GET /api/v1/cities/compare?ids=delhi,mumbai,bengaluru&days=7
+Response: { data: [{ city, dominantPollutant, trend, lastReadingTime, readings: [{ observedAt, aqi, pm25, pm10, no2 }] }] }
+
+GET /api/v1/users/me
+Response: { data: { id, email, name, role, active, lastLoginAt, demoMode } }
+
+PATCH /api/v1/users/me
+Body: { firstName, lastName }
+Response: { data: { id, email, name, role, active, lastLoginAt, demoMode } }
+
+PATCH /api/v1/users/me/password
+Body: { currentPassword, newPassword }
+Response: { message }
+
+GET /api/v1/alerts?status=active&severity=high&cityId=delhi&search=pm2.5&page=1&limit=20
+Response: { data, total, page, limit, totalPages }
+
+GET /api/v1/admin/audit?page=1&limit=50&days=7&action=login
+Response: { data: [{ id, userEmail, action, entityType, entityId, ipAddress, createdAt }], total, page, limit, totalPages }
+
+Cached endpoints:
+GET /api/v1/dashboard/overview?cityId=delhi
+GET /api/v1/cities
+Header: X-Cache is HIT or MISS
 ```
 
 ## Environment Notes

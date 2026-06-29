@@ -9,6 +9,7 @@ export async function createSeedData() {
   const users = [
     { id: 'usr-admin', email: 'admin@airiq.local', name: 'Admin User', role: 'admin', passwordHash, active: true },
     { id: 'usr-analyst', email: 'analyst@airiq.local', name: 'Analyst User', role: 'analyst', passwordHash, active: true },
+    { id: 'usr-demo', email: 'demo@airiq.local', name: 'Demo Operator', role: 'analyst', passwordHash, active: true },
     { id: 'usr-viewer', email: 'viewer@airiq.local', name: 'Viewer User', role: 'viewer', passwordHash, active: true },
   ];
 

@@ -12,9 +12,11 @@ const statements = [
     active INTEGER NOT NULL DEFAULT 1,
     reset_token_hash TEXT,
     reset_token_expires_at TEXT,
+    last_login_at TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
   )`,
+  `ALTER TABLE users ADD COLUMN last_login_at TEXT`,
   `CREATE TABLE IF NOT EXISTS refresh_tokens (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -163,6 +165,16 @@ const statements = [
     key TEXT PRIMARY KEY,
     value_json TEXT NOT NULL,
     updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS audit_events (
+    id TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES users(id) ON DELETE SET NULL,
+    user_email TEXT,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT,
+    ip_address TEXT,
+    created_at TEXT NOT NULL
   )`,
 ];
 

@@ -78,6 +78,8 @@ export class AirIqService {
     return rows.filter((alert) =>
       (!filters.cityId || alert.cityId === filters.cityId) &&
       (!filters.status || alert.status === filters.status) &&
+      (!filters.severity || alert.severity === filters.severity) &&
+      (!filters.search || `${alert.title} ${alert.description} ${alert.ward}`.toLowerCase().includes(filters.search.toLowerCase())) &&
       (!filters.unreadOnly || !alert.readAt));
   }
 
@@ -195,6 +197,35 @@ export class AirIqService {
     return { data, ...pageMeta(total, page, limit) };
   }
 
+  async compareCities(ids, days = 7) {
+    const cityIds = ids.slice(0, 3);
+    const from = new Date(Date.now() - days * 24 * 60 * 60_000).toISOString();
+    const rows = await db.select().from(schema.historicalReadings)
+      .where(and(gte(schema.historicalReadings.observedAt, from)))
+      .orderBy(schema.historicalReadings.observedAt);
+    const cities = await this.listCities();
+    return cityIds.map((cityId) => {
+      const city = cities.find((item) => item.id === cityId);
+      const history = rows.filter((row) => row.cityId === cityId).map((row) => ({
+        observedAt: row.observedAt,
+        aqi: row.aqi,
+        pm25: row.pm25,
+        pm10: row.pm10,
+        no2: row.no2,
+      }));
+      const dominantPollutant = city?.pm25 >= city?.pm10 && city?.pm25 >= city?.no2
+        ? 'PM2.5'
+        : city?.pm10 >= city?.no2 ? 'PM10' : 'NO2';
+      return {
+        city,
+        dominantPollutant,
+        trend: city?.trend ?? 'flat',
+        lastReadingTime: history.at(-1)?.observedAt ?? city?.updatedAt ?? null,
+        readings: history,
+      };
+    }).filter((item) => item.city);
+  }
+
   async unreadAlerts(limit = 5) {
     return db.select().from(schema.alerts).where(isNull(schema.alerts.readAt)).orderBy(desc(schema.alerts.createdAt)).limit(limit);
   }
@@ -216,6 +247,16 @@ export class AirIqService {
     await db.insert(schema.settings).values({ key: 'notifications', valueJson: JSON.stringify(value), updatedAt: now() })
       .onConflictDoUpdate({ target: schema.settings.key, set: { valueJson: JSON.stringify(value), updatedAt: now() } });
     return value;
+  }
+
+  async listAuditEvents({ page = 1, limit = 50, days = 7, action } = {}) {
+    const since = new Date(Date.now() - days * 24 * 60 * 60_000).toISOString();
+    const rows = await db.select().from(schema.auditEvents).orderBy(desc(schema.auditEvents.createdAt));
+    const filtered = rows.filter((event) =>
+      event.createdAt >= since &&
+      (!action || event.action === action));
+    const start = (page - 1) * limit;
+    return { data: filtered.slice(start, start + limit), ...pageMeta(filtered.length, page, limit) };
   }
 }
 

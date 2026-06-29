@@ -1,4 +1,4 @@
-import type { Advisory, Alert, Attribution, City, Correlation, DashboardOverview, EnforcementCase, ForecastPoint, HistoricalReading, Paginated, SensorReading, User } from './types';
+import type { Advisory, Alert, AuditEvent, Attribution, City, CityComparison, Correlation, DashboardOverview, EnforcementCase, ForecastPoint, HistoricalReading, Paginated, SensorReading, User } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api/v1';
 const WS_URL = API_URL.startsWith('http')
@@ -50,6 +50,7 @@ export interface LoginResult { user: User; accessToken: string; refreshToken: st
 export const api = {
   register: (name: string, email: string, password: string) => post<LoginResult>('/auth/register', { name, email, password }),
   login: (email: string, password: string) => post<LoginResult>('/auth/login', { email, password }),
+  demoLogin: () => post<LoginResult>('/auth/login', { email: 'demo@airiq.local', password: 'Password123!' }),
   refreshToken: (refreshToken: string) => post<{ accessToken: string; expiresIn: number }>('/auth/refresh', { refreshToken }),
   logout: (refreshToken?: string) => post<void>('/auth/logout', { refreshToken }),
   sendPasswordReset: (email: string) => post<{ message: string }>('/auth/send-reset', { email }),
@@ -58,16 +59,20 @@ export const api = {
 
   overview: (cityId = 'delhi') => get<DashboardOverview>(`/dashboard/overview?cityId=${encodeURIComponent(cityId)}`),
   cities: async () => (await get<{ data: City[] }>('/cities')).data,
+  compareCities: async (ids: string[], days = 7) => (await get<{ data: CityComparison[] }>(`/cities/compare?ids=${encodeURIComponent(ids.join(','))}&days=${days}`)).data,
   readings: async (cityId = 'delhi') => (await get<{ data: SensorReading[] }>(`/readings?cityId=${encodeURIComponent(cityId)}`)).data,
   forecasts: async (cityId = 'delhi') => (await get<{ data: ForecastPoint[] }>(`/forecasts?cityId=${encodeURIComponent(cityId)}`)).data,
   attribution: async (cityId = 'delhi') => (await get<{ data: Attribution | null }>(`/attributions?cityId=${encodeURIComponent(cityId)}`)).data,
 
-  alertsPage: (params: { cityId?: string; page?: number; limit?: number; unread?: boolean } = {}) => {
+  alertsPage: (params: { cityId?: string; page?: number; limit?: number; unread?: boolean; status?: string; severity?: string; search?: string } = {}) => {
     const search = new URLSearchParams();
     if (params.cityId) search.set('cityId', params.cityId);
     if (params.page) search.set('page', String(params.page));
     if (params.limit) search.set('limit', String(params.limit));
     if (params.unread) search.set('unread', 'true');
+    if (params.status) search.set('status', params.status);
+    if (params.severity) search.set('severity', params.severity);
+    if (params.search) search.set('search', params.search);
     return get<Paginated<Alert>>(`/alerts?${search.toString()}`);
   },
   alerts: async (cityId?: string) => (await api.alertsPage({ cityId, limit: 100 })).data,
@@ -91,6 +96,18 @@ export const api = {
   generateEnforcement: async (cityId = 'delhi') => (await post<{ data: EnforcementCase[] }>('/enforcement/generate', { cityId })).data,
 
   users: async () => (await get<{ data: User[] }>('/auth/users')).data,
+  auditEvents: (params: { page?: number; limit?: number; days?: number; action?: string } = {}) => {
+    const search = new URLSearchParams({
+      page: String(params.page ?? 1),
+      limit: String(params.limit ?? 50),
+      days: String(params.days ?? 7),
+    });
+    if (params.action) search.set('action', params.action);
+    return get<Paginated<AuditEvent>>(`/admin/audit?${search.toString()}`);
+  },
+  profile: async () => (await get<{ data: User }>('/users/me')).data,
+  updateProfile: async (payload: { firstName: string; lastName: string }) => (await patch<{ data: User }>('/users/me', payload)).data,
+  changePassword: (payload: { currentPassword: string; newPassword: string }) => patch<{ message: string }>('/users/me/password', payload),
   historicalPage: (params: { cityId?: string; from: string; to: string; page?: number; limit?: number }) => {
     const search = new URLSearchParams({
       cityId: params.cityId ?? 'delhi',

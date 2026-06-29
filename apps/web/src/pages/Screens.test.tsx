@@ -19,6 +19,7 @@ import {
 } from './Screens';
 import { AuthProvider } from '../auth/AuthContext';
 import { CityProvider } from '../context/CityContext';
+import { ToastProvider } from '../components/Toast';
 
 // Mock charts and maps to avoid JSDOM rendering issues
 vi.mock('../components/Charts', () => ({
@@ -111,9 +112,11 @@ describe('Screens & Dashboards Page Render', () => {
     return render(
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <AuthProvider>
-            <CityProvider>{ui}</CityProvider>
-          </AuthProvider>
+          <ToastProvider>
+            <AuthProvider>
+              <CityProvider>{ui}</CityProvider>
+            </AuthProvider>
+          </ToastProvider>
         </BrowserRouter>
       </QueryClientProvider>
     );

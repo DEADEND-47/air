@@ -8,6 +8,7 @@ import {
   ChevronDown,
   Cross,
   Database,
+  FileSearch,
   Gauge,
   LogOut,
   Menu,
@@ -17,6 +18,7 @@ import {
   Settings,
   ShieldCheck,
   Siren,
+  SplitSquareHorizontal,
   Sun,
   Users,
   Wind,
@@ -28,12 +30,13 @@ import { api } from '../lib/api';
 import { connectRealtime } from '../lib/realtime';
 
 const navigation = [
-  { to: '/', label: 'Command Center', icon: Gauge },
+  { to: '/dashboard', label: 'Command Center', icon: Gauge },
   { to: '/attribution', label: 'Attribution Engine', icon: Radar },
   { to: '/forecasting', label: 'Forecasting', icon: Activity },
   { to: '/health', label: 'Citizen Advisories', icon: Cross },
   { to: '/enforcement', label: 'Enforcement', icon: ShieldCheck },
   { to: '/cities', label: 'Multi-City View', icon: Building2 },
+  { to: '/compare', label: 'Compare Cities', icon: SplitSquareHorizontal },
   { to: '/alerts', label: 'Alert Center', icon: Siren },
   { to: '/historical', label: 'Historical Data', icon: Database },
 ];
@@ -73,7 +76,7 @@ export function AppShell() {
       <a className="skip-link" href="#main-content">Skip to main content</a>
       <header className="topbar">
         <button className="icon-button mobile-only" aria-label="Open navigation" onClick={() => setMobileOpen(true)}><Menu /></button>
-        <NavLink to="/" className="wordmark" aria-label="AirIQ home"><LogoMark /><span>AirIQ</span></NavLink>
+        <NavLink to="/dashboard" className="wordmark" aria-label="AirIQ dashboard"><LogoMark /><span>AirIQ</span></NavLink>
         <div className="global-search">
           <Search aria-hidden="true" />
           <label className="sr-only" htmlFor="global-search">Search AirIQ</label>
@@ -148,6 +151,13 @@ export function AppShell() {
                 }}
               >
                 <Link
+                  to="/profile"
+                  onClick={() => setMenuOpen(false)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.75rem', borderRadius: '6px', textDecoration: 'none', color: 'inherit', fontSize: '0.875rem' }}
+                >
+                  <Users size={15} /> Profile
+                </Link>
+                <Link
                   to="/settings"
                   onClick={() => setMenuOpen(false)}
                   style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.75rem', borderRadius: '6px', textDecoration: 'none', color: 'inherit', fontSize: '0.875rem' }}
@@ -178,7 +188,8 @@ export function AppShell() {
           {navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} className={({ isActive }: NavLinkRenderProps) => `nav-item ${isActive ? 'active' : ''}`}><Icon aria-hidden="true" /><span>{label}</span></NavLink>)}
         </nav>
         <div className="sidebar-spacer" />
-        <NavLink className="nav-item" to="/admin"><Users aria-hidden="true" /><span>Team & Access</span></NavLink>
+        {user?.role === 'admin' && <NavLink className="nav-item" to="/admin"><Users aria-hidden="true" /><span>Team & Access</span></NavLink>}
+        {user?.role === 'admin' && <NavLink className="nav-item" to="/admin/audit"><FileSearch aria-hidden="true" /><span>Audit Log</span></NavLink>}
         <NavLink className="nav-item" to="/settings"><Settings aria-hidden="true" /><span>System Settings</span></NavLink>
         <button className="nav-item logout" onClick={logout}><LogOut aria-hidden="true" /><span>Sign out</span></button>
         <div className="system-health"><div><span className="health-dot" />Systems nominal</div><small>18 / 18 feeds online</small></div>
@@ -186,6 +197,7 @@ export function AppShell() {
       {mobileOpen && <button className="sidebar-scrim mobile-only" aria-label="Close navigation overlay" onClick={() => setMobileOpen(false)} />}
 
       <main id="main-content" className="main-content" key={location.pathname}>
+        {user?.demoMode && <div className="demo-banner">Demo Mode: read-only portfolio walkthrough</div>}
         <Outlet />
       </main>
     </div>
