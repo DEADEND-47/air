@@ -5,8 +5,7 @@ import { LoadingState } from './components/Ui';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { PasswordResetPage } from './pages/PasswordResetPage';
-import { SessionsPage } from './pages/SessionsPage';
-import { AdminPage, AlertsPage, AttributionPage, CitiesPage, DashboardPage, EnforcementPage, ForecastingPage, HealthPage, NotFoundPage, SettingsPage } from './pages/Screens';
+import { AdminPage, AlertsPage, AttributionPage, CitiesPage, DashboardPage, EnforcementPage, ForecastingPage, HealthPage, HistoricalPage, NotFoundPage, SettingsPage } from './pages/Screens';
 
 function ProtectedLayout() {
   const { user, loading } = useAuth();
@@ -32,9 +31,9 @@ export function App() {
       <Route path="enforcement" element={<EnforcementPage />} />
       <Route path="cities" element={<CitiesPage />} />
       <Route path="alerts" element={<AlertsPage />} />
+      <Route path="historical" element={<HistoricalPage />} />
       <Route path="settings" element={<SettingsPage />} />
       <Route path="admin" element={<AdminPage />} />
-      <Route path="sessions" element={<SessionsPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Route>
   </Routes>;

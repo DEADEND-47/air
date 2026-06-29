@@ -15,6 +15,33 @@ export function AqiBadge({ value, compact = false }: { value: number; compact?: 
   return <span className={`aqi-badge aqi-${band}`}><strong>{value}</strong>{!compact && <span>{aqiLabel(value)}</span>}</span>;
 }
 
+export function AqiBand({ value }: { value: number }) {
+  const bands = [
+    { label: 'Good', max: 50, color: '#47e6a5' },
+    { label: 'Moderate', max: 100, color: '#facc15' },
+    { label: 'Unhealthy SG', max: 150, color: '#fb923c' },
+    { label: 'Unhealthy', max: 200, color: '#ef4444' },
+    { label: 'Very Unhealthy', max: 300, color: '#a855f7' },
+    { label: 'Hazardous', max: 500, color: '#7f1d1d' },
+  ];
+  const active = bands.findIndex((band) => value <= band.max);
+  return <div className="aqi-band" aria-label={`AQI band indicator. Current AQI ${value}`}>
+    {bands.map((band, index) => <div key={band.label} className={index === active ? 'active' : ''} style={{ background: band.color }}><span>{band.label}</span></div>)}
+  </div>;
+}
+
+export function PaginationControls({ page, totalPages, total, limit, onPage }: { page: number; totalPages: number; total: number; limit: number; onPage: (page: number) => void }) {
+  const start = total === 0 ? 0 : (page - 1) * limit + 1;
+  const end = Math.min(total, page * limit);
+  return <div className="pagination-controls">
+    <span>Showing {start}-{end} of {total}</span>
+    <div>
+      <button className="button ghost" disabled={page <= 1} onClick={() => onPage(page - 1)}>Previous</button>
+      <button className="button ghost" disabled={page >= totalPages} onClick={() => onPage(page + 1)}>Next</button>
+    </div>
+  </div>;
+}
+
 export function StatusChip({ value }: { value: string }) {
   return <span className={`status-chip status-${value.replaceAll('_', '-')}`}>{value.replaceAll('_', ' ')}</span>;
 }

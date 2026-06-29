@@ -1,10 +1,18 @@
-import { useEffect, useState, type FormEvent, type ChangeEvent } from 'react';
+import { useState } from 'react';
 import { ArrowRight, CheckCircle, KeyRound, LockKeyhole, Mail, Wind } from 'lucide-react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 import { useAuth } from '../auth/AuthContext';
 import { ApiError } from '../lib/api';
 
 type Mode = 'request' | 'reset' | 'done';
+const requestSchema = z.object({ email: z.string().email('Enter a valid email address') });
+const resetSchema = z.object({
+  password: z.string().min(8, 'Password must be at least 8 characters').regex(/[A-Z]/, 'Password must contain an uppercase letter').regex(/[0-9]/, 'Password must contain a number'),
+  confirmPassword: z.string().min(8, 'Confirm your password'),
+}).refine((value) => value.password === value.confirmPassword, { message: 'Passwords do not match', path: ['confirmPassword'] });
 
 export function PasswordResetPage() {
   const { user, sendPasswordReset, resetPassword } = useAuth();
@@ -13,19 +21,13 @@ export function PasswordResetPage() {
   const tokenFromUrl = params.get('token');
 
   const [mode, setMode] = useState<Mode>(tokenFromUrl || user ? 'reset' : 'request');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const requestForm = useForm<z.infer<typeof requestSchema>>({ resolver: zodResolver(requestSchema), defaultValues: { email: '' } });
+  const resetForm = useForm<z.infer<typeof resetSchema>>({ resolver: zodResolver(resetSchema), defaultValues: { password: '', confirmPassword: '' } });
 
-  useEffect(() => {
-    if (tokenFromUrl || user) setMode('reset');
-  }, [tokenFromUrl, user]);
-
-  const handleRequest = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleRequest = requestForm.handleSubmit(async ({ email }) => {
     setError(''); setSubmitting(true);
     try {
       await sendPasswordReset(email);
@@ -35,15 +37,9 @@ export function PasswordResetPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  });
 
-  const handleReset = async (event: FormEvent) => {
-    event.preventDefault();
-    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
-    if (password.length < 8) { setError('Password must be at least 8 characters'); return; }
-    if (!/[A-Z]/.test(password)) { setError('Password must contain an uppercase letter'); return; }
-    if (!/[0-9]/.test(password)) { setError('Password must contain a number'); return; }
-
+  const handleReset = resetForm.handleSubmit(async ({ password }) => {
     setError(''); setSubmitting(true);
     try {
       await resetPassword(tokenFromUrl ?? '', password);
@@ -53,7 +49,7 @@ export function PasswordResetPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  });
 
   return (
     <main className="login-page">
@@ -83,15 +79,16 @@ export function PasswordResetPage() {
 
             <label>
               Email address
-              <input id="reset-email" type="email" autoComplete="email" value={email} onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} required placeholder="you@organization.in" />
+              <input id="reset-email" type="email" autoComplete="email" placeholder="you@organization.in" {...requestForm.register('email')} />
+              {requestForm.formState.errors.email && <small className="field-error">{requestForm.formState.errors.email.message}</small>}
             </label>
 
             <button id="reset-request-submit" className="button primary login-submit" disabled={submitting}>
-              {submitting ? 'Sending…' : <><Mail size={16} /><span>Send Reset Link</span><ArrowRight /></>}
+              {submitting ? 'Sending...' : <><Mail size={16} /><span>Send Reset Link</span><ArrowRight /></>}
             </button>
 
             <div className="login-footer-links">
-              <Link to="/login" className="link-btn">← Back to login</Link>
+              <Link to="/login" className="link-btn">{'<-'} Back to login</Link>
             </div>
           </form>
         )}
@@ -111,24 +108,22 @@ export function PasswordResetPage() {
               New Password
               <div className="input-with-icon">
                 <LockKeyhole />
-                <input id="new-password" type="password" autoComplete="new-password" value={password} onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)} required minLength={8} />
+                <input id="new-password" type="password" autoComplete="new-password" {...resetForm.register('password')} />
               </div>
+              {resetForm.formState.errors.password && <small className="field-error">{resetForm.formState.errors.password.message}</small>}
             </label>
 
             <label>
               Confirm New Password
               <div className="input-with-icon">
                 <LockKeyhole />
-                <input id="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)} required minLength={8} />
+                <input id="confirm-password" type="password" autoComplete="new-password" {...resetForm.register('confirmPassword')} />
               </div>
+              {resetForm.formState.errors.confirmPassword && <small className="field-error">{resetForm.formState.errors.confirmPassword.message}</small>}
             </label>
 
-            {confirmPassword && confirmPassword !== password && (
-              <small style={{ color: '#ef4444', display: 'block', marginTop: '-0.5rem' }}>Passwords don't match</small>
-            )}
-
             <button id="reset-submit" className="button primary login-submit" disabled={submitting}>
-              {submitting ? 'Updating…' : <><span>Set New Password</span><ArrowRight /></>}
+              {submitting ? 'Updating...' : <><span>Set New Password</span><ArrowRight /></>}
             </button>
           </form>
         )}
@@ -141,7 +136,7 @@ export function PasswordResetPage() {
             <span className="eyebrow">SUCCESS</span>
             <h2>Password updated!</h2>
             <p style={{ marginBottom: '2rem', opacity: 0.7, fontSize: '0.875rem' }}>
-              Your password has been reset. All other sessions have been signed out for security.
+              Your password has been reset. You can now sign in with the new password.
             </p>
             <button id="go-to-login" className="button primary login-submit" onClick={() => navigate('/login')}>
               <span>Sign In Now</span><ArrowRight />
@@ -149,7 +144,7 @@ export function PasswordResetPage() {
           </div>
         )}
 
-        <footer>AirIQ Control Plane <span>•</span> Build 1.0.0 <span>•</span> Encrypted</footer>
+        <footer>AirIQ Local Stack <span>-</span> Express <span>-</span> SQLite</footer>
       </section>
     </main>
   );

@@ -27,6 +27,7 @@ vi.mock('../components/Charts', () => ({
   ConfidenceChart: () => <div data-testid="ConfidenceChart" />,
   CityTrendChart: () => <div data-testid="CityTrendChart" />,
   ContributionComparison: () => <div data-testid="ContributionComparison" />,
+  Sparkline: () => <div data-testid="Sparkline" />,
 }));
 
 vi.mock('../components/MapPanel', () => ({
@@ -40,12 +41,16 @@ vi.mock('../lib/api', () => ({
     advisories: vi.fn(),
     createAdvisory: vi.fn(),
     enforcement: vi.fn(),
+    enforcementPage: vi.fn(),
     generateEnforcement: vi.fn(),
     updateEnforcement: vi.fn(),
     cities: vi.fn(),
     alerts: vi.fn(),
+    alertsPage: vi.fn(),
     correlateAlerts: vi.fn(),
     updateAlert: vi.fn(),
+    markAlertRead: vi.fn(),
+    historicalPage: vi.fn(),
     users: vi.fn(),
   },
   tokenStore: {
@@ -54,11 +59,6 @@ vi.mock('../lib/api', () => ({
     clear: vi.fn(),
   },
   refreshStore: {
-    get: vi.fn(),
-    set: vi.fn(),
-    clear: vi.fn(),
-  },
-  sessionStore: {
     get: vi.fn(),
     set: vi.fn(),
     clear: vi.fn(),
@@ -103,6 +103,8 @@ describe('Screens & Dashboards Page Render', () => {
       },
       insight: 'Traffic is the main source today.',
     });
+    vi.mocked(api.alertsPage).mockResolvedValue({ data: [], total: 0, page: 1, limit: 8, totalPages: 1 });
+    vi.mocked(api.enforcementPage).mockResolvedValue({ data: [], total: 0, page: 1, limit: 5, totalPages: 1 });
   });
 
   const wrap = (ui: React.ReactElement) => {
@@ -196,7 +198,7 @@ describe('Screens & Dashboards Page Render', () => {
     await waitFor(() => {
       expect(screen.getByText('Atmospheric Outlook')).toBeInTheDocument();
       expect(screen.getByText('360')).toBeInTheDocument();
-      expect(screen.getByText('340–380')).toBeInTheDocument();
+      expect(screen.getByText('340-380')).toBeInTheDocument();
       expect(screen.getByText('wind speed')).toBeInTheDocument();
     });
   });
@@ -223,7 +225,7 @@ describe('Screens & Dashboards Page Render', () => {
       { id: 'case-1', cityId: 'delhi', ward: 'Okhla', target: 'Industrial cluster', category: 'Industrial emissions', priority: 96, evidenceScore: 0.92, estimatedImpact: 18.4, status: 'queued', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
     ];
 
-    vi.mocked(api.enforcement).mockResolvedValue(mockCases as unknown as EnforcementCase[]);
+    vi.mocked(api.enforcementPage).mockResolvedValue({ data: mockCases as unknown as EnforcementCase[], total: 1, page: 1, limit: 5, totalPages: 1 });
 
     wrap(<EnforcementPage />);
 
@@ -259,7 +261,7 @@ describe('Screens & Dashboards Page Render', () => {
       clusters: [{ id: 'cluster-1', alertIds: ['alert-1'], summary: 'Correlated plume', severity: 'critical', confidence: 0.95 }]
     };
 
-    vi.mocked(api.alerts).mockResolvedValue(mockAlerts as unknown as Alert[]);
+    vi.mocked(api.alertsPage).mockResolvedValue({ data: mockAlerts as unknown as Alert[], total: 1, page: 1, limit: 8, totalPages: 1 });
     vi.mocked(api.correlateAlerts).mockResolvedValue(mockCorrelations as unknown as Correlation);
 
     wrap(<AlertsPage />);
@@ -280,7 +282,7 @@ describe('Screens & Dashboards Page Render', () => {
 
   it('should render AdminPage operators table', async () => {
     const mockUsers = [
-      { id: 'usr-1', email: 'admin@airiq.city', name: 'Aarav Mehta', role: 'city_admin', active: true }
+      { id: 'usr-1', email: 'admin@airiq.local', name: 'Admin User', role: 'admin', active: true }
     ];
 
     vi.mocked(api.users).mockResolvedValue(mockUsers as unknown as User[]);
@@ -289,8 +291,8 @@ describe('Screens & Dashboards Page Render', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Team & Access')).toBeInTheDocument();
-      expect(screen.getByText('Aarav Mehta')).toBeInTheDocument();
-      expect(screen.getByText('admin@airiq.city')).toBeInTheDocument();
+      expect(screen.getByText('Admin User')).toBeInTheDocument();
+      expect(screen.getByText('admin@airiq.local')).toBeInTheDocument();
     });
   });
 

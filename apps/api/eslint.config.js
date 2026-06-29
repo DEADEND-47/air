@@ -1,8 +1,24 @@
 import eslint from '@eslint/js';
-import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default [
   eslint.configs.recommended,
-  ...tseslint.configs.recommended,
-  { ignores: ['dist/**', 'coverage/**'] },
-);
+  {
+    ignores: ['coverage/**', 'data/**', 'dist/**', 'uploads/**'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      globals: {
+        Buffer: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        FormData: 'readonly',
+        process: 'readonly',
+        setTimeout: 'readonly',
+        URLSearchParams: 'readonly',
+      },
+    },
+    rules: {
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    },
+  },
+];

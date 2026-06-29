@@ -1,51 +1,25 @@
-# AirIQ — Task List
+# AirIQ Simplification Task List
 
-## Task 1: Air Quality Data Pipeline
-- [x] Audit existing schema and codebase
-- [ ] Write migration `0002_historical_pipeline.sql`
-- [ ] Create `apps/api/src/pipeline/` directory with ETL modules
-  - [ ] `data-sources.ts` — adapter interfaces
-  - [ ] `synthetic-generator.ts` — 16 cities × 730 days of realistic data
-  - [ ] `validators.ts` — row validation
-  - [ ] `feature-engineer.ts` — derived features
-  - [ ] `etl-pipeline.ts` — orchestrator
-  - [ ] `bulk-import.ts` — one-shot population script
-  - [ ] `daily-update.ts` — scheduled incremental ingestion
-- [ ] Add historical API routes to `app.ts`
-- [ ] Update `AirIqRepository` port with historical methods
-- [ ] Implement `PostgresAirIqRepository` historical methods
-- [ ] Add `pipeline:import` npm script
-- [ ] Tests: `etl-pipeline.test.ts`, `synthetic-generator.test.ts`
+## Completed Migration Goals
+- [x] Keep the monorepo shape with `apps/api` and `apps/web`.
+- [x] Replace the backend with plain Express JavaScript.
+- [x] Use SQLite through `better-sqlite3` and Drizzle ORM.
+- [x] Replace Supabase/JWKS auth with local JWT + bcrypt auth.
+- [x] Keep register, login, refresh token, logout, and password reset flows.
+- [x] Simplify roles to `admin`, `analyst`, and `viewer`.
+- [x] Keep domain features: cities, readings, forecasts, attributions, alerts, advisories, enforcement, uploads, settings, and ETL.
+- [x] Remove Docker, Supabase config, OpenAPI YAML, Prometheus metrics, Redis usage, and external AI provider usage.
+- [x] Use local deterministic agents for forecast, attribution, advisories, enforcement, and alert correlation.
 
-## Task 2: Enterprise Authentication System
-- [x] Audit existing auth service and models
-- [ ] Write migration `0003_auth_enterprise.sql`
-- [ ] Extend domain `models.ts` with Session, OtpCode, PasswordReset
-- [ ] Create `email-service.ts` (console stub)
-- [ ] Create `enhanced-auth-service.ts`
-  - [ ] register, verifyEmail
-  - [ ] login (with rememberMe), loginWithOtp
-  - [ ] refreshToken
-  - [ ] sendPasswordReset, resetPassword
-  - [ ] listSessions, revokeSession, revokeAllSessions
-- [ ] Update `ports.ts` with new repository methods
-- [ ] Update `postgres-repository.ts` with new methods
-- [ ] Create `apps/api/src/routes/auth-routes.ts`
-- [ ] Update `app.ts` to mount new auth routes
-- [ ] Frontend: Update `AuthContext.tsx` with new methods
-- [ ] Frontend: Update `LoginPage.tsx` (Remember Me, OTP, Forgot Password)
-- [ ] Frontend: Create `RegisterPage.tsx`
-- [ ] Frontend: Create `PasswordResetPage.tsx`
-- [ ] Frontend: Create `SessionsPage.tsx`
-- [ ] Frontend: Update `App.tsx` router with new routes
-- [ ] Tests: `enhanced-auth-service.test.ts`
+## Local Verification
+- [ ] Run `npm install`.
+- [ ] Run `npm run db:migrate`.
+- [ ] Run `npm run db:seed`.
+- [ ] Run `npm run lint`.
+- [ ] Run `npm run typecheck`.
+- [ ] Run `npm run test`.
+- [ ] Run `npm run build`.
 
-## Task 3: Integration & Verification
-- [ ] Run DB migrations
-- [ ] Run seed
-- [ ] Run full test suite
-- [ ] Verify historical API endpoint
-- [ ] Verify registration → OTP → login flow (browser)
-- [ ] Verify Remember Me / refresh token
-- [ ] Verify password reset flow
-- [ ] Verify session management
+## Demo Login
+- Email: `admin@airiq.local`
+- Password: `Password123!`

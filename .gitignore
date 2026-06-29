@@ -4,10 +4,15 @@ coverage/
 .env
 .env.*
 !.env.example
+apps/api/.env
+apps/web/.env
 playwright-report/
 test-results/
 uploads/*
 !uploads/.gitkeep
+data/
+apps/api/data/
+apps/api/uploads/
 *.log
 .DS_Store
 Thumbs.db

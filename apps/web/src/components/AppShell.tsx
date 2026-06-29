@@ -1,11 +1,13 @@
-import { useState } from 'react';
-import { NavLink, Outlet, useLocation, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { NavLink, Outlet, useLocation, Link, type NavLinkRenderProps } from 'react-router-dom';
 import {
   Activity,
   BellRing,
   Building2,
   ChevronDown,
   Cross,
+  Database,
   Gauge,
   LogOut,
   Menu,
@@ -13,7 +15,6 @@ import {
   Radar,
   Search,
   Settings,
-  Shield,
   ShieldCheck,
   Siren,
   Sun,
@@ -23,6 +24,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 import { useCity } from '../context/CityContext';
+import { api } from '../lib/api';
+import { connectRealtime } from '../lib/realtime';
 
 const navigation = [
   { to: '/', label: 'Command Center', icon: Gauge },
@@ -32,15 +35,32 @@ const navigation = [
   { to: '/enforcement', label: 'Enforcement', icon: ShieldCheck },
   { to: '/cities', label: 'Multi-City View', icon: Building2 },
   { to: '/alerts', label: 'Alert Center', icon: Siren },
+  { to: '/historical', label: 'Historical Data', icon: Database },
 ];
 
 export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [theme, setTheme] = useState(() => localStorage.getItem('airiq-theme') ?? 'dark');
   const { user, logout } = useAuth();
   const { activeCityId, setActiveCityId, activeCity, cities } = useCity();
   const location = useLocation();
+  const client = useQueryClient();
+  const unread = useQuery({ queryKey: ['alerts', 'unread'], queryFn: api.unreadAlerts, enabled: Boolean(user), refetchInterval: 60_000 });
+
+  useEffect(() => {
+    if (!user) return undefined;
+    return connectRealtime((event) => {
+      if (event.type.startsWith('alert.')) {
+        void client.invalidateQueries({ queryKey: ['alerts'] });
+      }
+      if (event.type === 'readings.updated') {
+        void client.invalidateQueries({ queryKey: ['overview'] });
+        void client.invalidateQueries({ queryKey: ['historical'] });
+      }
+    });
+  }, [client, user]);
 
   const setCurrentTheme = (next: string) => {
     setTheme(next);
@@ -58,7 +78,7 @@ export function AppShell() {
           <Search aria-hidden="true" />
           <label className="sr-only" htmlFor="global-search">Search AirIQ</label>
           <input id="global-search" type="search" placeholder="Search coordinates, wards, nodes..." />
-          <kbd>⌘ K</kbd>
+          <kbd>Ctrl K</kbd>
         </div>
         <div className="topbar-actions">
           <select
@@ -88,7 +108,24 @@ export function AppShell() {
           </select>
           <div className="live-pill"><span />LIVE</div>
           <button className="icon-button" aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`} onClick={() => setCurrentTheme(theme === 'dark' ? 'light' : 'dark')}>{theme === 'dark' ? <Sun /> : <Moon />}</button>
-          <NavLink to="/alerts" className="icon-button notification-button" aria-label="View alerts"><BellRing /><span className="notification-dot" /></NavLink>
+          <div className="notification-wrap">
+            <button className="icon-button notification-button" aria-label="View unread alerts" onClick={() => setAlertsOpen((value) => !value)}>
+              <BellRing />
+              {!!unread.data?.length && <span className="notification-count">{unread.data.length}</span>}
+            </button>
+            {alertsOpen && (
+              <div className="notification-menu">
+                <div className="notification-menu-heading"><strong>Unread alerts</strong><Link to="/alerts" onClick={() => setAlertsOpen(false)}>View all</Link></div>
+                {!unread.data?.length ? <p>No unread alerts.</p> : unread.data.slice(0, 5).map((alert) => (
+                  <button key={alert.id} onClick={async () => { await api.markAlertRead(alert.id); await unread.refetch(); }}>
+                    <span>{alert.severity}</span>
+                    <strong>{alert.title}</strong>
+                    <small>{alert.ward}</small>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div style={{ position: 'relative' }}>
             <button
               className="operator-menu"
@@ -110,13 +147,6 @@ export function AppShell() {
                   minWidth: '200px',
                 }}
               >
-                <Link
-                  to="/sessions"
-                  onClick={() => setMenuOpen(false)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.6rem 0.75rem', borderRadius: '6px', textDecoration: 'none', color: 'inherit', fontSize: '0.875rem' }}
-                >
-                  <Shield size={15} /> Active Sessions
-                </Link>
                 <Link
                   to="/settings"
                   onClick={() => setMenuOpen(false)}
@@ -145,7 +175,7 @@ export function AppShell() {
           <small>NODE AX-{(activeCityId ?? 'delhi').slice(0, 3).toUpperCase()}-992</small>
         </div>
         <nav>
-          {navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}><Icon aria-hidden="true" /><span>{label}</span></NavLink>)}
+          {navigation.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} end={to === '/'} onClick={() => setMobileOpen(false)} className={({ isActive }: NavLinkRenderProps) => `nav-item ${isActive ? 'active' : ''}`}><Icon aria-hidden="true" /><span>{label}</span></NavLink>)}
         </nav>
         <div className="sidebar-spacer" />
         <NavLink className="nav-item" to="/admin"><Users aria-hidden="true" /><span>Team & Access</span></NavLink>

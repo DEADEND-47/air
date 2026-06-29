@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 :root {
   color-scheme: dark;
   --bg: #080d12;
@@ -264,3 +268,34 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .password-strength { display: flex; align-items: center; gap: 8px; margin-top: 4px; margin-bottom: 2px; }
 .strength-bar { flex: 1; height: 4px; background: var(--border); border-radius: 999px; overflow: hidden; }
 .strength-fill { height: 100%; border-radius: 999px; transition: width .3s ease, background .3s ease; }
+
+/* -- V2 realtime dashboard additions -- */
+.notification-wrap { position: relative; }
+.notification-count { position: absolute; top: 2px; right: 2px; min-width: 16px; height: 16px; display: grid; place-items: center; padding: 0 4px; border-radius: 999px; background: var(--danger); color: #fff; font-size: 9px; font-weight: 800; }
+.notification-menu { position: absolute; top: calc(100% + 10px); right: 0; width: min(340px, calc(100vw - 24px)); z-index: 250; padding: 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 18px 44px rgba(0,0,0,.42); }
+.notification-menu-heading { display: flex; justify-content: space-between; gap: 12px; padding: 4px 4px 8px; }
+.notification-menu-heading a { color: var(--primary); font-size: 11px; }
+.notification-menu p { margin: 8px 4px; color: var(--text-muted); font-size: 12px; }
+.notification-menu button { width: 100%; display: grid; gap: 3px; padding: 9px; border: 0; border-radius: 6px; color: var(--text); background: transparent; text-align: left; cursor: pointer; }
+.notification-menu button:hover { background: var(--surface-high); }
+.notification-menu button span, .notification-menu button small { color: var(--text-muted); font: 8px 'JetBrains Mono'; text-transform: uppercase; }
+.aqi-band-panel { margin-bottom: 14px; }
+.aqi-band { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; min-height: 46px; }
+.aqi-band div { position: relative; border-radius: 6px; opacity: .48; border: 1px solid rgba(255,255,255,.18); }
+.aqi-band div.active { opacity: 1; box-shadow: 0 0 0 2px var(--text), 0 12px 24px rgba(0,0,0,.25); }
+.aqi-band span { position: absolute; inset: auto 6px 6px; color: #fff; font-size: 9px; font-weight: 800; text-shadow: 0 1px 6px rgba(0,0,0,.45); }
+.sparkline { width: 82px; height: 30px; }
+.city-ranking article { grid-template-columns: 34px 1fr 82px auto 22px; }
+.pagination-controls { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; color: var(--text-muted); font-size: 12px; }
+.pagination-controls div { display: flex; gap: 8px; }
+.field-error { color: var(--danger); font-size: 11px; text-transform: none; }
+.status-unread { color: var(--primary); background: var(--primary-soft); }
+.historical-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 12px; padding: 14px; }
+.historical-filters label { display: grid; gap: 6px; color: var(--text-muted); font-size: 10px; }
+.historical-filters input { min-width: 0; height: 38px; padding: 0 10px; color: var(--text); background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); }
+
+@media (max-width: 620px) {
+  .aqi-band { grid-template-columns: repeat(2, minmax(0, 1fr)); min-height: 132px; }
+  .historical-filters { grid-template-columns: 1fr; }
+  .pagination-controls { align-items: flex-start; flex-direction: column; }
+}

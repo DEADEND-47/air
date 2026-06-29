@@ -9,7 +9,9 @@ test.describe('AirIQ E2E Operations Flow', () => {
         contentType: 'application/json',
         body: JSON.stringify({
           accessToken: 'mock-jwt-token-123',
-          user: { id: 'usr-admin', email: 'admin@airiq.city', name: 'Aarav Mehta', role: 'city_admin', active: true }
+          refreshToken: 'mock-refresh-token-123',
+          expiresIn: 3600,
+          user: { id: 'usr-admin', email: 'admin@airiq.local', name: 'Admin User', role: 'admin', active: true }
         }),
       });
     });
@@ -19,7 +21,7 @@ test.describe('AirIQ E2E Operations Flow', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          user: { id: 'usr-admin', email: 'admin@airiq.city', name: 'Aarav Mehta', role: 'city_admin', active: true }
+          user: { id: 'usr-admin', email: 'admin@airiq.local', name: 'Admin User', role: 'admin', active: true }
         }),
       });
     });
@@ -61,7 +63,11 @@ test.describe('AirIQ E2E Operations Flow', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ data: [] }),
+        body: JSON.stringify({
+          data: [
+            { id: 'delhi', name: 'Delhi', state: 'NCT', latitude: 28.6, longitude: 77.2, aqi: 342, pm25: 320, pm10: 410, no2: 85, trend: 'up', updatedAt: new Date().toISOString() }
+          ]
+        }),
       });
     });
 
@@ -99,8 +105,8 @@ test.describe('AirIQ E2E Operations Flow', () => {
     await expect(page.locator('h2')).toContainText('Enter command center');
 
     // 3. Fill in operator credentials (default values are pre-filled in UI)
-    await page.fill('input[type="email"]', 'admin@airiq.city');
-    await page.fill('input[type="password"]', 'AirIQ!2026');
+    await page.fill('input[type="email"]', 'admin@airiq.local');
+    await page.fill('input[type="password"]', 'Password123!');
 
     // 4. Click login submit button
     await page.click('button.login-submit');
