@@ -22,14 +22,14 @@ export function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const form = useForm<LoginForm>({ resolver: zodResolver(loginSchema), defaultValues: { email: 'admin@airiq.local', password: 'Password123!' } });
 
-  if (user) return <Navigate to="/" replace />;
+  if (user) return <Navigate to="/dashboard" replace />;
 
   const handleSubmit = form.handleSubmit(async (values) => {
     setError('');
     setSubmitting(true);
     try {
       await login(values.email, values.password);
-      navigate((location.state as { from?: string } | null)?.from ?? '/', { replace: true });
+      navigate((location.state as { from?: string } | null)?.from ?? '/dashboard', { replace: true });
     } catch (reason) {
       setError(reason instanceof ApiError ? reason.message : 'Unable to reach the AirIQ API');
     } finally {
