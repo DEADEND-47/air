@@ -30,7 +30,7 @@ AirIQ is a smart-city air quality dashboard simplified for local React + Node de
 - Notification bell with unread alerts and mark-as-read actions
 - Server-side pagination for alerts, enforcement, and historical tables
 - React Hook Form + Zod validation on login, register, and password reset
-- Student-friendly deployment guide in [DEPLOYMENT.md](/E:/air/DEPLOYMENT.md)
+- Student-friendly deployment guide in [DEPLOYMENT.md](DEPLOYMENT.md)
 
 ## Folder Structure
 
@@ -42,6 +42,7 @@ apps/
       db/                  Drizzle schema, SQLite connection, migrate, seed
       middleware/          Express error handling
       pipeline/            ETL import/update scripts
+      realtime/            WebSocket connections and event pub/sub hub
       routes/              auth and AirIQ REST routes
       services/            AuthService, AirIqService, email service
       app.js               Express app factory
@@ -79,6 +80,7 @@ The Drizzle schema lives in `apps/api/src/db/schema.js` and covers:
 - `enforcement_cases`
 - `uploads`
 - `settings`
+- `audit_events`
 
 ## Key Files
 
@@ -88,6 +90,10 @@ The Drizzle schema lives in `apps/api/src/db/schema.js` and covers:
 - `apps/api/src/routes/airiq-routes.js` exposes cities, readings, forecasts, attribution, alerts, advisories, enforcement, uploads, settings, ETL, pagination, and alert read-state updates.
 - `apps/web/src/auth/AuthContext.tsx` restores tokens and exposes login/register/reset/logout.
 - `apps/web/src/lib/api.ts` is the fetch-based API client and WebSocket URL helper.
+- `apps/web/src/pages/LandingPage.tsx` public landing page with feature highlights and one-click demo entry.
+- `apps/web/src/pages/ComparePage.tsx` city comparison page with multi-city AQI charts.
+- `apps/web/src/pages/HistoricalDataPage.tsx` historical data query screen with server-side pagination and CSV export.
+- `apps/web/src/pages/Screens.tsx` contains the core app screens including Dashboard, Alert Center, Advisories, profiles, and audit log pages.
 
 ## Demo Features To Try
 
@@ -154,7 +160,7 @@ Header: X-Cache is HIT or MISS
 
 ## Environment Notes
 
-Use the root [.env.example](/E:/air/.env.example) as the starting point for local setup.
+Use the root [.env.example](.env.example) as the starting point for local setup.
 
 - `VITE_API_URL` should normally stay `http://localhost:4000/api/v1`
 - WebSocket connections reuse that API host automatically and connect to `/ws`
